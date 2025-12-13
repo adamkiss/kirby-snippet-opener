@@ -17,7 +17,7 @@ import * as path from "path";
 export function activate(context: vscode.ExtensionContext) {
   const disposables = [
     registerOpenSnippetCommand(),
-    registerCreateSnippetFromSelectionCommand(),
+    // registerCreateSnippetFromSelectionCommand(),
     registerSnippetDocumentLinkProvider()
   ];
   
@@ -59,37 +59,37 @@ function registerOpenSnippetCommand(): vscode.Disposable {
  * 
  * @returns {vscode.Disposable} The disposable for the registered command.
  */
-function registerCreateSnippetFromSelectionCommand(): vscode.Disposable {
-  return vscode.commands.registerCommand(
-    "kirbysnippetopener.createSnippetFromSelection",
-    async () => {
-      // Get the active editor and selected text
-      const editor = vscode.window.activeTextEditor;
-      if (!editor) {
-        vscode.window.showErrorMessage("No active editor found.");
-        return;
-      }
-
-      const selectedText = editor.document.getText(editor.selection);
-      if (!selectedText) {
-        vscode.window.showErrorMessage("No text selected.");
-        return;
-      }
-
-      // Prompt the user to enter a file path for the snippet
-      const snippetPath = await promptForSnippetPath();
-      if (!snippetPath) {
-        return;
-      }
-
-      // Create the snippet file and replace selection if successful
-      const success = await createSnippetFile(snippetPath, selectedText);
-      if (success) {
-        await replaceSelectionWithSnippetCall(editor, snippetPath);
-      }
-    }
-  );
-}
+// function registerCreateSnippetFromSelectionCommand(): vscode.Disposable {
+//   return vscode.commands.registerCommand(
+//     "kirbysnippetopener.createSnippetFromSelection",
+//     async () => {
+//       // Get the active editor and selected text
+//       const editor = vscode.window.activeTextEditor;
+//       if (!editor) {
+//         vscode.window.showErrorMessage("No active editor found.");
+//         return;
+//       }
+// 
+//       const selectedText = editor.document.getText(editor.selection);
+//       if (!selectedText) {
+//         vscode.window.showErrorMessage("No text selected.");
+//         return;
+//       }
+// 
+//       // Prompt the user to enter a file path for the snippet
+//       const snippetPath = await promptForSnippetPath();
+//       if (!snippetPath) {
+//         return;
+//       }
+// 
+//       // Create the snippet file and replace selection if successful
+//       const success = await createSnippetFile(snippetPath, selectedText);
+//       if (success) {
+//         await replaceSelectionWithSnippetCall(editor, snippetPath);
+//       }
+//     }
+//   );
+// }
 
 /**
  * Registers a Document Link provider for PHP files that detects snippets and makes
@@ -114,7 +114,13 @@ function registerSnippetDocumentLinkProvider(): vscode.Disposable {
       let match;
       
       while ((match = findAnyMatch(text, regex)) !== null) {
-        const snippetName = match[2];
+        // method calls can't contain slashes, so we use `__` instead
+        const snippetName = match[2].replace('__', '/');
+        if (snippetName.endsWith('_end')) {
+          // discard autogen matches like `s::layout_end()`
+          continue;
+        }
+
         const link = createDocumentLink(document, match, snippetName);
         if (link) {
           links.push(link);
@@ -219,12 +225,12 @@ function getExtensionConfig() {
  * 
  * @returns {Promise<string | undefined>} The entered snippet path or undefined if cancelled.
  */
-async function promptForSnippetPath(): Promise<string | undefined> {
-  return await vscode.window.showInputBox({
-    prompt: "Enter the file path for the new snippet without suffix (e.g., components/card)",
-    placeHolder: "components/card",
-  });
-}
+// async function promptForSnippetPath(): Promise<string | undefined> {
+//   return await vscode.window.showInputBox({
+//     prompt: "Enter the file path for the new snippet without suffix (e.g., components/card)",
+//     placeHolder: "components/card",
+//   });
+// }
 
 /**
  * Creates a snippet file with the given content.
@@ -233,38 +239,38 @@ async function promptForSnippetPath(): Promise<string | undefined> {
  * @param content - The content to write to the snippet file.
  * @returns {Promise<boolean>} True if the file was created successfully, false otherwise.
  */
-async function createSnippetFile(snippetPath: string, content: string): Promise<boolean> {
-  const config = getExtensionConfig();
-  const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-  
-  if (!config.snippetPath) {
-    vscode.window.showErrorMessage("You must set a snippet path in VS Code configuration.");
-    return false;
-  }
-  
-  if (!workspaceFolder) {
-    vscode.window.showErrorMessage("No workspace folder found.");
-    return false;
-  }
-
-  // Construct the full file path
-  const fullPath = path.join(
-    workspaceFolder.uri.fsPath,
-    config.snippetPath,
-    `${snippetPath}.php`
-  );
-
-  // Write the selected text to the new snippet file
-  try {
-    fs.mkdirSync(path.dirname(fullPath), { recursive: true });
-    fs.writeFileSync(fullPath, content, "utf8");
-    vscode.window.showInformationMessage(`Snippet created at ${snippetPath}`);
-    return true;
-  } catch (error: any) {
-    vscode.window.showErrorMessage(`Error creating snippet: ${error.message}`);
-    return false;
-  }
-}
+// async function createSnippetFile(snippetPath: string, content: string): Promise<boolean> {
+//   const config = getExtensionConfig();
+//   const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+//   
+//   if (!config.snippetPath) {
+//     vscode.window.showErrorMessage("You must set a snippet path in VS Code configuration.");
+//     return false;
+//   }
+//   
+//   if (!workspaceFolder) {
+//     vscode.window.showErrorMessage("No workspace folder found.");
+//     return false;
+//   }
+// 
+//   // Construct the full file path
+//   const fullPath = path.join(
+//     workspaceFolder.uri.fsPath,
+//     config.snippetPath,
+//     `${snippetPath}.php`
+//   );
+// 
+//   // Write the selected text to the new snippet file
+//   try {
+//     fs.mkdirSync(path.dirname(fullPath), { recursive: true });
+//     fs.writeFileSync(fullPath, content, "utf8");
+//     vscode.window.showInformationMessage(`Snippet created at ${snippetPath}`);
+//     return true;
+//   } catch (error: any) {
+//     vscode.window.showErrorMessage(`Error creating snippet: ${error.message}`);
+//     return false;
+//   }
+// }
 
 /**
  * Replaces the current selection with a snippet function call.
@@ -272,22 +278,22 @@ async function createSnippetFile(snippetPath: string, content: string): Promise<
  * @param editor - The text editor containing the selection.
  * @param snippetPath - The path of the created snippet.
  */
-async function replaceSelectionWithSnippetCall(
-  editor: vscode.TextEditor, 
-  snippetPath: string
-): Promise<void> {
-  // Clean the path by removing common prefixes and suffixes
-  const cleanPath = snippetPath
-    .replace(/^snippets\//, "")
-    .replace(/\.php$/, "");
-  
-  const snippetCall = `snippet('${cleanPath}')`;
-  
-  // Replace the selected text with the snippet() function call
-  await editor.edit((editBuilder) => {
-    editBuilder.replace(editor.selection, snippetCall);
-  });
-}
+// async function replaceSelectionWithSnippetCall(
+//   editor: vscode.TextEditor, 
+//   snippetPath: string
+// ): Promise<void> {
+//   // Clean the path by removing common prefixes and suffixes
+//   const cleanPath = snippetPath
+//     .replace(/^snippets\//, "")
+//     .replace(/\.php$/, "");
+//   
+//   const snippetCall = `snippet('${cleanPath}')`;
+//   
+//   // Replace the selected text with the snippet() function call
+//   await editor.edit((editBuilder) => {
+//     editBuilder.replace(editor.selection, snippetCall);
+//   });
+// }
 
 /**
  * Returns a regular expression that matches the pattern `snippet('...')` or `snippet("...")`.
