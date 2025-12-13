@@ -106,40 +106,37 @@ function registerSnippetDocumentLinkProvider(): vscode.Disposable {
     provideDocumentLinks(document) {
       const links: vscode.DocumentLink[] = [];
       const text = document.getText();
-      const regex = [
+      const regexes = [
         getSnippetRegex(),
         getShortSnippetRegex(),
         getClassSnippetRegex()
       ];
       let match;
       
-      while ((match = findAnyMatch(text, regex)) !== null) {
-        // method calls can't contain slashes, so we use `__` instead
-        const snippetName = match[2].replace('__', '/');
-        if (snippetName.endsWith('_end')) {
-          // discard autogen matches like `s::layout_end()`
-          continue;
-        }
+      regexes.forEach(regex => {
+        while ((match = regex.exec(text)) !== null) {
+          const snippetName = match[2]
+            // method calls can't contain slashes, so we use `__` instead
+            .replace('__', '/')
+            // replace underscores with dashes (again, for method calls)
+            .replace('_', '-');
 
-        const link = createDocumentLink(document, match, snippetName);
-        if (link) {
-          links.push(link);
+          if (snippetName.endsWith('-end')) {
+            // discard autogen matches like `s::layout_end()`
+            // now renamed to `layout-end`
+            continue;
+          }
+
+          const link = createDocumentLink(document, match, snippetName);
+          if (link) {
+            links.push(link);
+          }
         }
-      }
-      
+      });
+
       return links;
     }
   });
-}
-
-function findAnyMatch(text: string, regexes: RegExp[]): RegExpExecArray | null {
-  for (const regex of regexes) {
-    const match = regex.exec(text);
-    if (match) {
-      return match;
-    }
-  }
-  return null;
 }
 
 /**
