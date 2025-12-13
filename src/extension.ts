@@ -106,10 +106,14 @@ function registerSnippetDocumentLinkProvider(): vscode.Disposable {
     provideDocumentLinks(document) {
       const links: vscode.DocumentLink[] = [];
       const text = document.getText();
-      const regex = getSnippetRegex();
+      const regex = [
+        getSnippetRegex(),
+        getShortSnippetRegex(),
+        getClassSnippetRegex()
+      ];
       let match;
       
-      while ((match = regex.exec(text)) !== null) {
+      while ((match = findAnyMatch(text, regex)) !== null) {
         const snippetName = match[2];
         const link = createDocumentLink(document, match, snippetName);
         if (link) {
@@ -120,6 +124,16 @@ function registerSnippetDocumentLinkProvider(): vscode.Disposable {
       return links;
     }
   });
+}
+
+function findAnyMatch(text: string, regexes: RegExp[]): RegExpExecArray | null {
+  for (const regex of regexes) {
+    const match = regex.exec(text);
+    if (match) {
+      return match;
+    }
+  }
+  return null;
 }
 
 /**
@@ -160,7 +174,7 @@ function getSnippetNameRange(document: vscode.TextDocument, match: RegExpExecArr
   const matchStart = match.index;
   
   // Find the exact position of the snippet name (excluding quotes)
-  const snippetNameStartInMatch = match[0].indexOf(quoteChar) + 1;
+  const snippetNameStartInMatch = match[0].indexOf(quoteChar) + match[1].length;
   const snippetNameStart = document.positionAt(matchStart + snippetNameStartInMatch);
   const snippetNameEnd = document.positionAt(matchStart + snippetNameStartInMatch + snippetName.length);
   
@@ -282,8 +296,30 @@ async function replaceSelectionWithSnippetCall(
  * @returns {RegExp} A regular expression to match snippet patterns.
  */
 function getSnippetRegex(): RegExp {
-  return /snippet\(\s*(['"])([^'"]+)\1[\s\S]*?\)/g;
+  return /(?<=[\s=;])snippet\(\s*(['"])([^'"]+)\1[\s\S]*?\)/g;
 }
 
+/**
+ * Returns a regular expression that matches the pattern `s('...')` or `s("...")`.
+ * The pattern captures the quote character and the content within the quotes.
+ *
+ * @returns {RegExp} A regular expression to match snippet patterns.
+ */
+function getShortSnippetRegex(): RegExp {
+  return /(?<=[\s=;])s\(\s*(['"])([^'"]+)\1[\s\S]*?\)/g;
+}
+
+/**
+ * Returns a regular expression that matches the pattern `s::name()`.
+ * The pattern captures the `::` for compatibility with the other parts
+ * of plugin and the name after the `::`.
+ *
+ * @returns {RegExp} A regular expression to match snippet patterns.
+ */
+function getClassSnippetRegex(): RegExp {
+  return /(?<=[\s=;])s(::)([\w]+)/g;
+}
+
+
 // Export for testing
-export { getSnippetRegex as snippetRegex, registerSnippetDocumentLinkProvider };
+export { getSnippetRegex, getShortSnippetRegex, getClassSnippetRegex, registerSnippetDocumentLinkProvider };

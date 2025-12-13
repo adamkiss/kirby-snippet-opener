@@ -1,8 +1,8 @@
 {
-  "name": "kirbysnippetopener",
-  "displayName": "Kirby Snippet Opener",
+  "name": "kirbysnippetopener-custom",
+  "displayName": "Kirby Snippet Opener (Custom)",
   "description": "simplifies the process of navigating and managing snippet templates in Kirby CMS projects",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "engines": {
     "vscode": "^1.94.0"
   },
@@ -71,14 +71,15 @@
     "test": "vscode-test"
   },
   "devDependencies": {
-    "@types/vscode": "^1.106.1",
     "@types/mocha": "^10.0.10",
-    "@types/node": "20.x",
+    "@types/node": "22.x",
+    "@types/vscode": "^1.94.1",
     "@typescript-eslint/eslint-plugin": "^8.48.1",
     "@typescript-eslint/parser": "^8.44.1",
-    "eslint": "^9.39.1",
-    "typescript": "^5.9.3",
     "@vscode/test-cli": "^0.0.12",
-    "@vscode/test-electron": "^2.5.2"
+    "@vscode/test-electron": "^2.5.2",
+    "@vscode/vsce": "^3.7.1",
+    "eslint": "^9.39.1",
+    "typescript": "^5.9.3"
   }
 }
