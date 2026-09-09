@@ -115,11 +115,10 @@ function registerSnippetDocumentLinkProvider(): vscode.Disposable {
       
       regexes.forEach(regex => {
         while ((match = regex.exec(text)) !== null) {
-          const snippetName = match.groups?.snippet ?? ''
+          const snippetName = (match.groups?.snippet ?? '')
             .replaceAll('\\', '/')
             // replace underscores with dashes (again, for method calls)
             .replaceAll('_', '-');
-
 
           if (snippetName.endsWith('-end')) {
             // discard autogen matches like `s\sub\layout_end()`

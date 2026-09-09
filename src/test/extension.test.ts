@@ -1,6 +1,6 @@
 import * as assert from "assert";
 import * as vscode from "vscode";
-import { getNamespacedFunctionRegex, getShortSnippetRegex, getSnippetRegex } from "../extension";
+import { getNamespacedFunctionRegex, getShortSnippetRegex, getSnippetRegex, registerSnippetDocumentLinkProvider } from "../extension";
 
 suite("snippetRegex Test Suite", () => {
   test("snippetRegex should match snippet calls", () => {
@@ -143,6 +143,39 @@ suite("snippetRegex Customization Tests", () => {
     
     assert.ok(match);
     assert.strictEqual(match?.groups?.snippet, "complex\\path");
+  });
+
+  test.skip("make document link should correctly replace characters in labeled open snippet", async () => {
+    const document = await vscode.workspace.openTextDocument({
+      content: ` s('o:complex/path', key: $data, another: true)`,
+      language: "php",
+    });
+    const linkProvider = registerSnippetDocumentLinkProvider();
+    console.log(linkProvider);
+    const links = await vscode.commands.executeCommand<vscode.DocumentLink[]>(
+      "vscode.executeLinkProvider",
+      document.uri
+    );
+    assert.ok(links.length > 0);
+    const link = links[0];
+    assert.ok(link);
+    assert.strictEqual(link.target?.path.includes("complex/path"), true);
+  });
+
+  test.skip("make document link should correctly replace characters in namespaced function calls", async () => {
+    const document = await vscode.workspace.openTextDocument({
+      content: ` s\\complex\\path(key: $data, another: true)`,
+      language: "php",
+    });
+    const linkProvider = registerSnippetDocumentLinkProvider();
+    const links = await vscode.commands.executeCommand<vscode.DocumentLink[]>(
+      "vscode.executeLinkProvider",
+      document.uri
+    );
+    assert.ok(links.length > 0);
+    const link = links[0];
+    assert.ok(link);
+    assert.strictEqual(link.target?.path.includes("complex/path"), true);
   });
 });
 
