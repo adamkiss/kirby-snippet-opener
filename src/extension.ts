@@ -109,21 +109,21 @@ function registerSnippetDocumentLinkProvider(): vscode.Disposable {
       const regexes = [
         getSnippetRegex(),
         getShortSnippetRegex(),
-        getClassSnippetRegex()
+        getNamespacedFunctionRegex()
       ];
       let match;
       
       regexes.forEach(regex => {
         while ((match = regex.exec(text)) !== null) {
-          const snippetName = match[2]
-            // method calls can't contain slashes, so we use `__` instead
-            .replace('__', '/')
+          const snippetName = match.groups?.snippet ?? ''
+            .replaceAll('\\', '/')
             // replace underscores with dashes (again, for method calls)
-            .replace('_', '-');
+            .replaceAll('_', '-');
+
 
           if (snippetName.endsWith('-end')) {
-            // discard autogen matches like `s::layout_end()`
-            // now renamed to `layout-end`
+            // discard autogen matches like `s\sub\layout_end()`
+            // now renamed to `sub/layout-end`
             continue;
           }
 
@@ -172,12 +172,17 @@ function createDocumentLink(
  * @returns {vscode.Range} The range of the snippet name.
  */
 function getSnippetNameRange(document: vscode.TextDocument, match: RegExpExecArray): vscode.Range {
-  const quoteChar = match[1];
-  const snippetName = match[2];
+  const quoteChar = match.groups?.quote ?? '';
+  const snippetName = match.groups?.snippet ?? '';
+  const label = match.groups?.label ?? '';
   const matchStart = match.index;
+
+  if (!snippetName) {
+    throw new Error("Snippet name not found in regex match.");
+  }
   
   // Find the exact position of the snippet name (excluding quotes)
-  const snippetNameStartInMatch = match[0].indexOf(quoteChar) + match[1].length;
+  const snippetNameStartInMatch = match[0].indexOf(quoteChar) + quoteChar.length + label.length;
   const snippetNameStart = document.positionAt(matchStart + snippetNameStartInMatch);
   const snippetNameEnd = document.positionAt(matchStart + snippetNameStartInMatch + snippetName.length);
   
@@ -299,7 +304,7 @@ function getExtensionConfig() {
  * @returns {RegExp} A regular expression to match snippet patterns.
  */
 function getSnippetRegex(): RegExp {
-  return /(?<=[\s=;])snippet\(\s*(['"])([^'"]+)\1[\s\S]*?\)/g;
+  return /(?<=[\s=;])snippet\(\s*(?<quote>['"])(?<snippet>[^'"]+)\1[\s\S]*?\)/g;
 }
 
 /**
@@ -309,20 +314,20 @@ function getSnippetRegex(): RegExp {
  * @returns {RegExp} A regular expression to match snippet patterns.
  */
 function getShortSnippetRegex(): RegExp {
-  return /(?<=[\s=;])s\(\s*(['"])(?:s\:|o\:|\<|c\:|e\:|\<)*([^'"]+)\1[\s\S]*?\)/g;
+  return /(?<=[\s=;])s\(\s*(?<quote>['"])(?<label>(?:s:|o:|\<|c:|e:|\>))*(?<snippet>[^'"]+)\1[\s\S]*?\)/g;
 }
 
 /**
- * Returns a regular expression that matches the pattern `s::name()`.
- * The pattern captures the `::` for compatibility with the other parts
- * of plugin and the name after the `::`.
+ * Returns a regular expression that matches the pattern `s\name()`.
+ * The pattern matches the snippet as a namespaced function I am
+ * playing around
  *
  * @returns {RegExp} A regular expression to match snippet patterns.
  */
-function getClassSnippetRegex(): RegExp {
-  return /(?<=[\s=;])s(::)([\w]+)/g;
+function getNamespacedFunctionRegex(): RegExp {
+  return /(?<=[\s=;])(?<label>s\\)(?<snippet>[a-zA-Z0-9_\\]+)\(/g;
 }
 
 
 // Export for testing
-export { getSnippetRegex, getShortSnippetRegex, getClassSnippetRegex, registerSnippetDocumentLinkProvider };
+export { getSnippetRegex, getShortSnippetRegex, getNamespacedFunctionRegex, registerSnippetDocumentLinkProvider };

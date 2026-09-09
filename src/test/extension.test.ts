@@ -1,6 +1,6 @@
 import * as assert from "assert";
 import * as vscode from "vscode";
-import { getClassSnippetRegex, getShortSnippetRegex, getSnippetRegex } from "../extension";
+import { getNamespacedFunctionRegex, getShortSnippetRegex, getSnippetRegex } from "../extension";
 
 suite("snippetRegex Test Suite", () => {
   test("snippetRegex should match snippet calls", () => {
@@ -8,7 +8,7 @@ suite("snippetRegex Test Suite", () => {
     const text = ` snippet('exampleSnippet',slots:true)`;
     const match = regex.exec(text);
     assert.ok(match);
-    assert.strictEqual(match[2], "exampleSnippet"); // Snippet name is in group 2
+    assert.strictEqual(match?.groups?.snippet, "exampleSnippet"); // Snippet name is in group 2
   });
 
   test("snippetRegex should match snippet calls with slot parameter", () => {
@@ -16,7 +16,7 @@ suite("snippetRegex Test Suite", () => {
     const text = ` snippet('exampleSnippet',slots:true)`;
     const match = regex.exec(text);
     assert.ok(match);
-    assert.strictEqual(match[2], "exampleSnippet");
+    assert.strictEqual(match?.groups?.snippet, "exampleSnippet");
   });
 
   test("snippetRegex should match multiple snippet calls", () => {
@@ -24,8 +24,8 @@ suite("snippetRegex Test Suite", () => {
     const text = ` snippet('firstSnippet'); snippet("secondSnippet",$data,false,true)`;
     const matches = [...text.matchAll(regex)];
     assert.strictEqual(matches.length, 2);
-    assert.strictEqual(matches[0][2], "firstSnippet");
-    assert.strictEqual(matches[1][2], "secondSnippet");
+    assert.strictEqual(matches[0].groups?.snippet, "firstSnippet");
+    assert.strictEqual(matches[1].groups?.snippet, "secondSnippet");
   });
 
   test("snippetRegex should not match invalid snippet calls", () => {
@@ -59,7 +59,7 @@ suite("snippetRegex Test Suite", () => {
     const match = regex.exec(text);
     
     assert.ok(match);
-    assert.strictEqual(match[2], "test-snippet");
+    assert.strictEqual(match?.groups?.snippet, "test-snippet");
   });
 
   test("snippetRegex should match snippets with complex parameters", () => {
@@ -68,7 +68,7 @@ suite("snippetRegex Test Suite", () => {
     const match = regex.exec(text);
     
     assert.ok(match);
-    assert.strictEqual(match[2], "complex/path");
+    assert.strictEqual(match?.groups?.snippet, "complex/path");
   });
 });
 
@@ -78,7 +78,7 @@ suite("snippetRegex Customization Tests", () => {
     const text = ` s('exampleSnippet')`;
     const match = regex.exec(text);
     assert.ok(match);
-    assert.strictEqual(match[2], "exampleSnippet"); // Snippet name is in group 2
+    assert.strictEqual(match?.groups?.snippet, "exampleSnippet"); // Snippet name is in group 2
   });
 
   test("snippetRegex should match multiple snippet calls", () => {
@@ -86,8 +86,8 @@ suite("snippetRegex Customization Tests", () => {
     const text = ` s('firstSnippet');s("secondSnippet", key: $data, another: true)`;
     const matches = [...text.matchAll(regex)];
     assert.strictEqual(matches.length, 2);
-    assert.strictEqual(matches[0][2], "firstSnippet");
-    assert.strictEqual(matches[1][2], "secondSnippet");
+    assert.strictEqual(matches[0].groups?.snippet, "firstSnippet");
+    assert.strictEqual(matches[1].groups?.snippet, "secondSnippet");
   });
 
   // DOESN'T PASS, but I have no idea why — the regexp works in other tests
@@ -113,7 +113,7 @@ suite("snippetRegex Customization Tests", () => {
     const match = regex.exec(text);
     
     assert.ok(match);
-    assert.strictEqual(match[2], "test-snippet");
+    assert.strictEqual(match?.groups?.snippet, "test-snippet");
   });
 
   test("snippetRegex should match snippets with complex parameters", () => {
@@ -122,16 +122,27 @@ suite("snippetRegex Customization Tests", () => {
     const match = regex.exec(text);
     
     assert.ok(match);
-    assert.strictEqual(match[2], "complex/path");
+    assert.strictEqual(match?.groups?.snippet, "complex/path");
   });
 
-  test("snippetRegex should match snippets with complex parameters", () => {
-    const regex = getClassSnippetRegex();
-    const text = ` s::complex__path(key: $data, another: true, options: ['slots' => true])`;
+  test("snippetRegex should match all labels", () => {
+    ['o:', 's:', 'c:', 'e:', '<', '>'].forEach(label => {
+      const text = ` s("${label}complex/path", key: $data, another: true)`;
+      const regex = getShortSnippetRegex();
+      const match = regex.exec(text);
+
+      assert.ok(match, `Failed to match snippet with label: ${label}`);
+      assert.strictEqual(match?.groups?.snippet, "complex/path");
+    });    
+  });
+
+  test("namespaceFunctionRegex should match the experimental namespacing method", () => {
+    const regex = getNamespacedFunctionRegex();
+    const text = ' s\\complex\\path(key: $data, another: true)';
     const match = regex.exec(text);
     
     assert.ok(match);
-    assert.strictEqual(match[2], "complex__path");
+    assert.strictEqual(match?.groups?.snippet, "complex\\path");
   });
 });
 
@@ -285,6 +296,6 @@ suite("Edge Cases Test Suite", () => {
     const match = regex.exec(text);
     
     assert.ok(match);
-    assert.strictEqual(match[2], "test");
+    assert.strictEqual(match?.groups?.snippet, "test");
   });
 });
