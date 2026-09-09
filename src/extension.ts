@@ -309,7 +309,7 @@ function getSnippetRegex(): RegExp {
  * @returns {RegExp} A regular expression to match snippet patterns.
  */
 function getShortSnippetRegex(): RegExp {
-  return /(?<=[\s=;])s\(\s*(['"])([^'"]+)\1[\s\S]*?\)/g;
+  return /(?<=[\s=;])s\(\s*(?:s:|o:|\<|c:|e:|\<)(['"])([^'"]+)\1[\s\S]*?\)/g;
 }
 
 /**
